@@ -8,7 +8,7 @@ class SlitherWorld extends IOWorld {
     constructor(name, w, h) {
         super(name, w, h);
 
-        this.food_limit = 2000;
+        this.food_limit = 4000;
         this.snake_min = 100;
         this.SM = new IOSnakeMgr(this);
     }
@@ -35,7 +35,8 @@ class SlitherWorld extends IOWorld {
                 let x = this.RandInt(this.w);//random in world
                 let y = this.RandInt(this.h);
                 if(this.CD.CircleCollision(x, y, rad, this.w/2, this.h/2, this.w/2) === true){
-                    let d = this.CreateDynamic(1, x, y, 0, 0, rad * 2, rad * 2, rad, this.RandInt(10) + 40);
+                    let c = this.RandInt(this.SM.colors.length - 1);//Index only needed
+                    let d = this.CreateDynamic(1, x, y, 0, 0, rad * 2, rad * 2, rad, this.RandInt(10) + 40, c);
                     d.origin_x = x;
                     d.origin_y = y;
                 }
@@ -50,10 +51,11 @@ class SlitherWorld extends IOWorld {
         let f = Object.keys(this.CD.GetAllObjs("dynamic")).length;
         if(f < this.food_limit + parts.length){//better optimized (one food amount check)
             for (let i = 0; i < parts.length; i+=2) {
+                let c = parts[i].color;//this.RandInt(this.SM.colors.length - 1);//Index only needed
                 let x = parts[i].x; let y = parts[i].y;
                 let rad = this.RandInt(10) + 20;//standard food = 68 radius
                 if(this.CD.CircleCollision(x, y, rad, this.w/2, this.h/2, this.w/2) === true) {
-                    let d = this.CreateDynamic(1, x, y, 0,0, rad * 2,rad * 2, rad, this.RandInt(10) + 20);
+                    let d = this.CreateDynamic(1, x, y, 0,0, rad * 2,rad * 2, rad, this.RandInt(10) + 20, c);
                     d.origin_x = x; d.origin_y = y;
                 }
             }

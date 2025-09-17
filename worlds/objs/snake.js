@@ -9,8 +9,10 @@ class IOSnakeManager {
         this.slowSpeed = 150;//7;
         this.fastSpeed = this.slowSpeed * 2;
         this.rad = 16;//32x32 head to start
-        this.slerp = 0.47;//0.4
-        this.LevelXP = 20;//100;
+        //this.slerp = 0.47;//0.4
+        //this.slerp = 0.35;//0.4
+        this.slerp = 0.25;//0.4
+        this.LevelXP = 50;//100;
 
         //this.colors =  ["f5e0dc", "f2cdcd", "f5c2e7", "cba6f7", "f38ba8", "eba0ac", "fab387", "f9e2af",
             //"a6e3a1", "94e2d5", "89dceb", "74c7ec", "89b4fa", "b4befe"];
@@ -46,6 +48,7 @@ class IOSnakeManager {
         head.EXP = 500;//Experience for growth (defaults)
         head.Level = 5;
         head.bright = 0;
+        head.bright_time = 0;
         let bb = 0;
         for(let i=0;i<size;i++){//tail parts
             z--;//z index for rendering
@@ -53,6 +56,7 @@ class IOSnakeManager {
             head.parts.push(p);//link object
             p.owner = head.id;//id reference to main unit/head
             p.isLead = false;//not head of snake
+            p.linkIndex = i + 1; // order along body
             p.bright = bb;//brightness of color for boost
             bb++;
             if(bb >= 10){bb = 0;}
@@ -128,10 +132,29 @@ class IOSnakeManager {
         if(head.EXP > 100){
             let tail = head.parts[head.parts.length - 1];
             let frad = 15;//standard food = 15 radius
-            let d = this.world.CreateDynamic(1, tail.x, tail.y, 0, 0, frad * 2, frad * 2, frad, 5);
+            let d = this.world.CreateDynamic(1, tail.x, tail.y, 0, 0, frad * 2, frad * 2, frad, 5, head.color);
             d.origin_x = tail.x;  d.origin_y = tail.y;
         }
 
+    }
+
+    drawSmoothCurveQuadratic(context, points) {
+        context.beginPath();
+        context.moveTo(points[0].x, points[0].y);
+
+        for (let i = 1; i < points.length - 1; i++) {
+            const xc = (points[i].x + points[i + 1].x) / 2;
+            const yc = (points[i].y + points[i + 1].y) / 2;
+            context.quadraticCurveTo(points[i].x, points[i].y, xc, yc);
+        }
+        // Connect the last two points with a straight line or another quadratic curve
+        context.lineTo(points[points.length - 1].x, points[points.length - 1].y);
+        context.stroke();
+    }
+    getDistance(p1, p2) {
+        const dx = p1.x - p2.x;
+        const dy = p1.y - p2.y;
+        return Math.sqrt(dx * dx + dy * dy);
     }
     //------------------------------------------------------------------------------------------------------------------
     //Tail parts
@@ -145,7 +168,17 @@ class IOSnakeManager {
         //const adjustedLerpFactor = Math.min(0.2 * (1 + (speedRatio - 1) * 0.5) * deltaSeconds, 1.0);
         //const adjustedLerpFactor = this.slerp;
 
-        obj.bright++; if(obj.bright >= 10){obj.bright = 0;}
+        //obj.bright++; if(obj.bright >= 10){obj.bright = 0;}
+        let rc = false
+        obj.bright_time += dt;
+        if(obj.bright_time > 0.05){
+            rc = true;
+            obj.bright_time = 0;
+        }
+
+        if(rc){
+            obj.bright--; if(obj.bright < 0){obj.bright = 10;}
+        }
 
         for (let i = 0; i < obj.parts.length; i++) {
             if(i === 0){
@@ -155,8 +188,10 @@ class IOSnakeManager {
             curr = obj.parts[i];
             curr.boost = obj.boost;//match head
             if(obj.boost && obj.EXP > 100){
-                curr.x = this.world.MLerp(curr.x, last.x, this.slerp * 1.2);//No Stretch
-                curr.y = this.world.MLerp(curr.y, last.y, this.slerp * 1.2);
+                //curr.x = this.world.MLerp(curr.x, last.x, this.slerp * 1.2);
+                //curr.y = this.world.MLerp(curr.y, last.y, this.slerp * 1.2);
+                curr.x = this.world.MLerp(curr.x, last.x, this.slerp * 1.5);
+                curr.y = this.world.MLerp(curr.y, last.y, this.slerp * 1.5);
 
             }
             else {
@@ -164,11 +199,34 @@ class IOSnakeManager {
                 curr.y = this.world.MLerp(curr.y, last.y, this.slerp);
             }
 
-            let targetAngle = Math.atan2(last.y - curr.y, last.x - curr.x);
-            let rotationSpeed = 0.1//0.05; // Adjust as needed
-            curr.angle = this.SimpleRotateTo(curr.angle, targetAngle, rotationSpeed);
+//            const length = this.getDistance(fromTracer, toTracer);
+//            const segmentRadius = this.radius * (1 - i * 0.015); // Subtle taper
 
-            curr.bright--; if(curr.bright < 0){curr.bright = 10;}
+            // Width = segment thickness (like your diameter)
+//            sprite.scale.x = (segmentRadius * 2) / 128;
+            // Height = length + thickness (like your stretched ImageLabel)
+//            sprite.scale.y = (length + segmentRadius) / 64;
+
+
+            //let targetAngle = Math.atan2(last.y - curr.y, last.x - curr.x);
+            //let targetAngle = Math.atan2(curr.y - last.y, curr.x - last.x);
+            //let rotationSpeed = 0.12//0.05; // Adjust as needed
+            //curr.angle = this.SimpleRotateTo(curr.angle, targetAngle, rotationSpeed);
+
+            if(i < obj.parts.length - 1){
+                let toTracer = obj.parts[i + 1];
+                const angle = Math.atan2(toTracer.y - curr.y, toTracer.x - curr.x);
+                curr.angle = angle + Math.PI / 2;
+            }
+            else {
+                const angle = Math.atan2(curr.y - last.y, curr.x - last.x);//previous
+                curr.angle = angle + Math.PI / 2;
+
+            }
+
+            if(rc){
+                curr.bright--; if(curr.bright < 0){curr.bright = 10;}
+            }
             /*
             const dx = last.x - curr.x;
             const dy = last.y - curr.y;
@@ -226,7 +284,8 @@ class IOSnakeManager {
         if (angleDifference < -Math.PI) angleDifference += 2 * Math.PI;
 
         // Apply a rotation speed to gradually turn the obj
-        let rotationSpeed = 0.1;// - (obj.radius / 2000)//0.05; // Adjust as needed as radius grows
+        //let rotationSpeed = 0.12;// - (obj.radius / 2000)//0.05; // Adjust as needed as radius grows
+        let rotationSpeed = 0.15;//FAST TURN
         //console.log(obj.radius / 2000)
 //        obj.angle += angleDifference * rotationSpeed;
         //console.log(obj.angle * (180 / Math.PI))
