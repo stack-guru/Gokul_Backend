@@ -1,14 +1,18 @@
-console.log("Node.js version:", process.version);
-require('dotenv').config() //console.log(process.env)
-var msgpack = require("msgpack-lite");
-//const fs = require('fs'); // For reading certificate files
-//const WebSocket = require('ws');
-const NTimer = require('./timer');
-const PM = require('./player');
+import { WebSocket } from 'ws';
+import { createServer } from 'http';
+import { createServer as createHttpsServer } from 'https';
+import express from 'express';
+import fs from 'fs';
+import msgpack from 'msgpack-lite';
+import dotenv from 'dotenv';
 
-//Game Worlds
-const AGAR = require('./worlds/agar-io');
-const SLITHER = require('./worlds/slither-io');
+import NTimer from './timer';
+import PM from './player';
+// import AGAR from './worlds/agar-io';
+import SLITHER from './worlds/slither-io';
+
+console.log("Node.js version:", process.version);
+dotenv.config(); //console.log(process.env)
 //TODO Add more types!!
 //***********************************************************************************************************************
 //Config SSL or Not (local development)
@@ -17,23 +21,18 @@ const cert_file = "/opt/bitnami/nginx/conf/game.iceturtlestudios.com.crt";
 //ssl_certificate_key  /opt/bitnami/nginx/conf/game.iceturtlestudios.com.key;
 //ssl_certificate      /opt/bitnami/nginx/conf/game.iceturtlestudios.com.crt;
 
-const express = require('express');
-const http = require('http');
-const WebSocket = require('ws'); // Note: 'ws' is capitalized for the class
-
 //import geckos from '@geckos.io/server'
 //import { iceServers } from '@geckos.io/server'
 //const GIO = require('@geckos.io/server');
 //***********************************************************************************************************************
 //***********************************************************************************************************************
-let hSERVER;
-if(process.env.USE_SSL === "TRUE"){
-    const { createServer } = require("https");
-    hSERVER = createServer({ key: fs.readFileSync(pem_file), cert: fs.readFileSync(cert_file) });
+// unused for now
+let hSERVER: any;
+if((process.env as any)['USE_SSL'] === "TRUE"){
+    hSERVER = createHttpsServer({ key: fs.readFileSync(pem_file), cert: fs.readFileSync(cert_file) });
     console.log("- USING HTTPS -")
 }
 else {
-    const { createServer } = require("http");
     hSERVER = createServer();
 }
 
@@ -42,31 +41,32 @@ else {
 //});//CORS ->https://socket.io/docs/v4/handling-cors/
 //***********************************************************************************************************************
 //***********************************************************************************************************************
-let MyTimer = null;
-let MyPM = null;
-let MyWorld = null;
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+let MyTimer: any = null;
+let MyPM: any = null;
+let MyWorld: any = null;
 //let wsPORT = process.env.PORT || 3000;
 const app = express();
-const server = http.createServer(app); // Create an HTTP server from your Express app
+const server = createServer(app); // Create an HTTP server from your Express app
 const wss = new WebSocket.Server({ server }); // Attach the WebSocket server to the existing HTTP server
 
 //const wss = new WebSocket.Server({ server: hSERVER  });
 //const wss = new WebSocket.WebSocketServer({ server: hSERVER });
-let PTime = 0;
-let PSendTime = 0;
-function heartbeat() { this.isAlive = true; }
+let PTime: number = 0;
+let PSendTime: number = 0;
+function heartbeat(this: WebSocket) { (this as any).isAlive = true; }
 //***********************************************************************************************************************
 //***********************************************************************************************************************
-async function Init(){
+async function Init(): Promise<void> {
 
-    let wtype = 0;//default
-    let w_wh = 10000;
+    let wtype: number = 0;//default
+    let w_wh: number = 10000;
     if(wtype === 0){ MyWorld = new SLITHER("Slither", w_wh, w_wh); }
     //if(wtype === 1){ MyWorld = new AGAR("Agar", 1024, 1024); }
 
     if(MyWorld){
 
-        app.get('/', (req, res) => {
+        app.get('/', (_req: any, res: any) => {
             res.send('Game Server!');
         });
 
@@ -75,13 +75,13 @@ async function Init(){
         MyPM = new PM(MyWorld);//Use World obj here
 
         //Setup Websockets
-        wss.on('connection', ws => {
+        wss.on('connection', (ws: WebSocket) => {
             console.log('Client connected');
-            MyPM.Create(ws, "", 0,0, 0);
-            ws.isAlive = true;
+            MyPM.Create(ws, "", 0);
+            (ws as any).isAlive = true;
             ws.on('pong', heartbeat);
 
-            ws.on('message', d => {
+            ws.on('message', (d: any) => {
                 //d = JSON.parse(d);
                 try {
                     if(d.length > 50){ return; }//
@@ -100,7 +100,7 @@ async function Init(){
                 //console.log(`Received: ${d}`);
                 //ws.send(`Server received your message: ${message}`);
             });
-            ws.on('input', d => {
+            ws.on('input', (_d: any) => {
 
             });
 
@@ -116,20 +116,20 @@ async function Init(){
         console.log("NO WORLD STARTED!")
     }
 
-    const PORT = process.env.PORT || 3000;
+    const PORT = (process.env as any)['PORT'] || 3000;
     server.listen(PORT, () => {
         console.log(`Server listening on port ${PORT}`);
     });
 
     const interval = setInterval(function ping() {
-        wss.clients.forEach(function each(ws) {
+        wss.clients.forEach(function each(ws: WebSocket) {
             console.log("PING Client")
-            if (ws.isAlive === false){
+            if ((ws as any).isAlive === false){
                 MyPM.Remove(ws);
                 return ws.terminate();
             }
 
-            ws.isAlive = false;
+            (ws as any).isAlive = false;
             ws.ping();
         });
     }, 30000);
@@ -160,7 +160,7 @@ async function Init(){
 }
 //***********************************************************************************************************************
 //***********************************************************************************************************************
-async function P0(dt) {
+async function P0(dt: number): Promise<void> {
     let hrstart  = process.hrtime();
     if(MyWorld){//FASTEST Game Loop!
         MyWorld.Process(dt);//Process world
@@ -171,7 +171,7 @@ async function P0(dt) {
 }
 //***********************************************************************************************************************
 //***********************************************************************************************************************
-async function P1(dt) {
+async function P1(_dt: number): Promise<void> {
     let hrstart  = process.hrtime();
     if(MyWorld){//Update Players only
         MyPM.UpdatePlayers();//Update Players (limited view area)
@@ -182,7 +182,7 @@ async function P1(dt) {
 }
 //***********************************************************************************************************************
 //***********************************************************************************************************************
-async function P2(dt) {
+async function P2(_dt: number): Promise<void> {
     //console.log("P2 " + dt);//1 Second
     let u = Object.keys(MyWorld.CD.GetAllObjs("unit")).length;
     let f = Object.keys(MyWorld.CD.GetAllObjs("dynamic")).length;
@@ -192,15 +192,15 @@ async function P2(dt) {
 }
 //***********************************************************************************************************************
 //***********************************************************************************************************************
-async function P3(dt) {
+async function P3(_dt: number): Promise<void> {
     //console.log("P3 " + dt);//30 Seconds
 
 }
 //***********************************************************************************************************************
 //***********************************************************************************************************************
-async function P4(dt) {
+async function P4(_dt: number): Promise<void> {
     //console.log("P4 " + dt);//1 Minute
 }
 //***********************************************************************************************************************
 //***********************************************************************************************************************
-Init().then(r => {});
+Init().then(_r => {});

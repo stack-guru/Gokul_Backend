@@ -1,10 +1,30 @@
-const c_grid = require("./c_grid");
+import c_grid from "./c_grid";
+import { GameObject, GridInterface } from '../types';
+
 //******************************************************************************************************************************
 //.IO Core Map Basics JS
 //Map - TileMap, Cells, Object Tracking, Math, Collision Detection
 //******************************************************************************************************************************
 class c_map {
-    constructor(w, h, vw, vh, ts, cs) {
+    ID: number;
+    w: number;
+    h: number;
+    vw: number;
+    vh: number;
+    ts: number;
+    cs: number;
+    BGrid: { [key: string]: boolean };
+    CD: GridInterface;
+    tm: number[];
+    statics: { [key: string]: GameObject };
+    dynamics: { [key: string]: GameObject };
+    units: { [key: string]: GameObject };
+    projectiles: { [key: string]: GameObject };
+    resources: { [key: string]: GameObject };
+    buildings: { [key: string]: GameObject };
+    effects: { [key: string]: GameObject };
+
+    constructor(w: number, h: number, vw: number, vh: number, ts: number, cs: number) {
         this.ID=0;//auto increment id
         this.w = w;//width/height in tiles (grid)
         this.h = h;
@@ -13,7 +33,7 @@ class c_map {
         this.ts = ts;//tilesize
         this.cs = cs;//cellsize
         this.BGrid = {};//blocking grid locations - also block
-        this.CD = new c_grid(cs, ts);
+        this.CD = new c_grid(cs);
         this.tm = this.tmNew(w, h, 1);//tilemap
         console.log("GridWH: " + w + " x " + h + " GridCellSize: " + cs);
         console.log("Tiles: " + (w * h));
@@ -29,43 +49,43 @@ class c_map {
     }
     //--------------------------------------------------------------------------------------------------------------
     //--------------------------------------------------------------------------------------------------------------
-    tmNew(w,h,v){ let m = []; for(let i=0;i < (w * h); i++ ){ m.push(v); } return m; }
-    tmGet(gx, gy){ return this.tm[(gy * this.w) + gx]; }
-    tmSet(gx, gy, v){ this.tm[(gy * this.w) + gx] = v; }
-    XYG(v){return  Math.floor(v / this.ts); }//XY to Grid Coordinate
-    RandInt(n) { return Math.floor(Math.random() * n); }
-    RoundToTwo(num) { return +(Math.round(num + "e+2")  + "e-2"); }
-    RoundToThree(num)  { return +(Math.round(num + "e+3")  + "e-3"); }
-    Lerp(start, end, amt)  { return (1-amt)*start+amt*end }
-    VecScale(x, y, s)  { return [x*s, y*s]; }
-    VecAdd(x1, y1, x2, y2)  { return [x1+x2, y1+y2]; }
-    VecSub(x1, y1, x2, y2)  { return [x1-x2, y1-y2]; }
-    VecNegate(x, y)  { return [-x, -y]; }
-    VecLengthSquared(x, y)  { return (x*x + y*y); }//Length
-    VecLength(x, y)  { return Math.sqrt(x*x + y*y); }//Slower Length
-    degToRad(deg)   { return deg * (Math.PI/180); }//Degrees to radians
-    radToDeg(rad)   { return rad * (180/Math.PI); }//Radians to degrees
-    Normalize(x, y)  { let l = this.VecLength(x, y); if(l !== 0) { x = x/l; y = y/l; } return [x, y]; }
-    NormalizeDegrees(r)  { r = r % 360; if (r < 0) { r += 360; } return r; }//normalize to 0-360 degree range
-    XYToDegree(x,y) { let r = Math.atan2(y, x) * (180/Math.PI); if (r < 0.0)  { r += 360.0; } return r; }
-    RotTarget(x,y,tx,ty) { return this.XYToDegree(tx - x,  ty - y); }
-    InRange(x, y, tx, ty, range){ if(this.VecLength(tx - x, ty - y) < range){ return true} return false; }
+    tmNew(w: number, h: number, v: number): number[] { let m = []; for(let i=0;i < (w * h); i++ ){ m.push(v); } return m; }
+    tmGet(gx: number, gy: number): number { return this.tm[(gy * this.w) + gx] ?? 0; }
+    tmSet(gx: number, gy: number, v: number): void { this.tm[(gy * this.w) + gx] = v; }
+    XYG(v: number): number {return  Math.floor(v / this.ts); }//XY to Grid Coordinate
+    RandInt(n: number): number { return Math.floor(Math.random() * n); }
+    RoundToTwo(num: number): number { return +(Math.round(Number(num + "e+2"))  + "e-2"); }
+    RoundToThree(num: number): number  { return +(Math.round(Number(num + "e+3"))  + "e-3"); }
+    Lerp(start: number, end: number, amt: number): number  { return (1-amt)*start+amt*end }
+    VecScale(x: number, y: number, s: number): [number, number]  { return [x*s, y*s]; }
+    VecAdd(x1: number, y1: number, x2: number, y2: number): [number, number]  { return [x1+x2, y1+y2]; }
+    VecSub(x1: number, y1: number, x2: number, y2: number): [number, number]  { return [x1-x2, y1-y2]; }
+    VecNegate(x: number, y: number): [number, number]  { return [-x, -y]; }
+    VecLengthSquared(x: number, y: number): number  { return (x*x + y*y); }//Length
+    VecLength(x: number, y: number): number  { return Math.sqrt(x*x + y*y); }//Slower Length
+    degToRad(deg: number): number   { return deg * (Math.PI/180); }//Degrees to radians
+    radToDeg(rad: number): number   { return rad * (180/Math.PI); }//Radians to degrees
+    Normalize(x: number, y: number): [number, number]  { let l = this.VecLength(x, y); if(l !== 0) { x = x/l; y = y/l; } return [x, y]; }
+    NormalizeDegrees(r: number): number  { r = r % 360; if (r < 0) { r += 360; } return r; }//normalize to 0-360 degree range
+    XYToDegree(x: number, y: number): number { let r = Math.atan2(y, x) * (180/Math.PI); if (r < 0.0)  { r += 360.0; } return r; }
+    RotTarget(x: number, y: number, tx: number, ty: number): number { return this.XYToDegree(tx - x,  ty - y); }
+    InRange(x: number, y: number, tx: number, ty: number, range: number): boolean { if(this.VecLength(tx - x, ty - y) < range){ return true} return false; }
     //---------------------------------------------------------------------------------------------------------------------------------------------
     //Obj Helpers
     //---------------------------------------------------------------------------------------------------------------------------------------------
-    ObjCreate(type, d){ this.ID++; this[type][this.ID] = d; this.CD.Update(this.ID, d); return this.ID; }
-    GetUnit(id){ if(this.units.hasOwnProperty(id)){ return this.units[id]; } return null; }
+    ObjCreate(type: string, d: GameObject): number { this.ID++; (this as any)[type][this.ID] = d; this.CD.Update(d); return this.ID; }
+    GetUnit(id: number): GameObject | null { if(this.units.hasOwnProperty(id)){ return this.units[id]!; } return null; }
     //--------------------------------------------------------------------------------------------------------------
     //--------------------------------------------------------------------------------------------------------------
-    rmGroupCD(G){
-        let RM = [];
-        for (let O in G) { if (G.hasOwnProperty(O)) { if(G[O].remove === 1){ this.CD.Remove(O, G[O]); RM.push(O); } } }
-        for(let i=0; i< RM.length; i++){ delete G[RM[i]]; }
+    rmGroupCD(G: { [key: string]: GameObject }): void {
+        let RM: string[] = [];
+        for (let O in G) { if (G.hasOwnProperty(O)) { if(G[O]?.remove === 1){ this.CD.Remove(G[O]!); RM.push(O); } } }
+        for(let i=0; i< RM.length; i++){ delete G[RM[i]!]; }
         if(RM.length>0){console.log(RM)}
     }
     //--------------------------------------------------------------------------------------------------------------
     //--------------------------------------------------------------------------------------------------------------
-    RotatePivot (px,py,pr,offsetx,offsety) {//sets location by rotating around a different pivot point
+    RotatePivot (px: number, py: number, pr: number, offsetx: number, offsety: number): [number, number] {//sets location by rotating around a different pivot point
         pr = this.NormalizeDegrees(pr);
         var c_ = Math.cos(this.degToRad(pr));
         var s_ = Math.sin(this.degToRad(pr));
@@ -75,7 +95,7 @@ class c_map {
     }
     //---------------------------------------------------------------------------------------------------------------------------------------------
     //---------------------------------------------------------------------------------------------------------------------------------------------
-    RandTMBasic(w, h, a, b, blocking){
+    RandTMBasic(w: number, h: number, a: number, b: number, blocking: boolean): number[] {
         let tm = this.tmNew(w, h, 1);
         if(blocking){ this.RandTM(tm, w, h, 0, 3); }//Blocking
         for(let i=a;i<b;i++){ this.RandTM(tm, w, h, i, 5); }//set tile from a to b small percentage (1-10 for example)
@@ -83,12 +103,12 @@ class c_map {
     }
     //---------------------------------------------------------------------------------------------------------------------------------------------
     //---------------------------------------------------------------------------------------------------------------------------------------------
-    RandTM(tm, w, h, v, r){//randomly set with percentage
-        for (let x=0; x<w; x++) { for (let y=0; y<h; y++) { if(this.RandInt(100) < r){ this.tmSet(tm, w, x, y, v); } }}
+    RandTM(_tm: number[], w: number, h: number, v: number, r: number): void {//randomly set with percentage
+        for (let x=0; x<w; x++) { for (let y=0; y<h; y++) { if(this.RandInt(100) < r){ this.tmSet(x, y, v); } }}
     }
     //---------------------------------------------------------------------------------------------------------------------------------------------
     //---------------------------------------------------------------------------------------------------------------------------------------------
-    IsBlocked(x, y, w, h, blocking){
+    IsBlocked(x: number, y: number, w: number, h: number, blocking: number): boolean {
         if(this.tmGet(this.XYG(x), this.XYG(y)) <= blocking){ return true;}
         if(this.tmGet(this.XYG((x + w - 1)), this.XYG(y)) <= blocking){ return true;}
         if(this.tmGet(this.XYG(x), this.XYG(y + h - 1)) <= blocking){ return true;}
@@ -104,7 +124,7 @@ class c_map {
     }
     //---------------------------------------------------------------------------------------------------------------------------------------------
     //---------------------------------------------------------------------------------------------------------------------------------------------
-    MoveTXY (x, y, tx, ty, speed, dt){
+    MoveTXY (x: number, y: number, tx: number, ty: number, speed: number, dt: number): [number, number] {
         if(x === tx && y === ty){ return [x,y]; }
         let vx = tx - x; let vy = ty - y;
         let dest = Math.sqrt(vx * vx + vy * vy);
@@ -116,7 +136,7 @@ class c_map {
     }
     //---------------------------------------------------------------------------------------------------------------------------------------------
     //---------------------------------------------------------------------------------------------------------------------------------------------
-    MoveVec(d, dt, block){
+    MoveVec(d: any, dt: number, _block: number){
         let nx = d.x + (Math.cos(d.r) * d.speed * dt);
         let ny = d.y + (Math.sin(d.r) * d.speed * dt);
         if(d.blk === 0){  d.x = nx; d.y = ny; return true; }//non blocked by walls
@@ -131,7 +151,7 @@ class c_map {
     //---------------------------------------------------------------------------------------------------------------------------------------------
     //Move with basic block
     //---------------------------------------------------------------------------------------------------------------------------------------------
-    MoveBlock(d, dt, block){
+    MoveBlock(d: any, dt: number, block: number){
         let xy = this.MoveTXY(d.x, d.y, d.tx, d.ty, d.speed, dt);
         if(block === 0){  d.x = xy[0]; d.y = xy[1]; return true; }//non blocked by walls
         if(this.IsBlocked(xy[0], xy[1], 16, 16, 0)){ }//false if blocked
@@ -141,7 +161,7 @@ class c_map {
     //---------------------------------------------------------------------------------------------------------------------------------------------
     //Move but try to slide on block
     //---------------------------------------------------------------------------------------------------------------------------------------------
-    MoveSlide(d, dt){
+    MoveSlide(d: any, dt: number){
         let xy = this.MoveTXY(d.x, d.y, d.tx, d.ty, d.speed, dt);
         if(this.IsBlocked(xy[0], xy[1], this.ts, this.ts, 0)){
             if(this.IsBlocked(xy[0], d.y, this.ts, this.ts, 0)){//Try with Y same and new X
@@ -157,12 +177,12 @@ class c_map {
     }
     //---------------------------------------------------------------------------------------------------------------------------------------------
     //---------------------------------------------------------------------------------------------------------------------------------------------
-    pStatic(d, dt){
+    pStatic(_d: any, _dt: number){
         //does nothing, no processing needed
     }
     //---------------------------------------------------------------------------------------------------------------------------------------------
     //---------------------------------------------------------------------------------------------------------------------------------------------
-    pDynamic(d, dt){
+    pDynamic(d: any, dt: number){
         if(d.remove === 1){ return; }
         if(d.mvt === 0){//vector
             let mv = this.MoveVec(d, dt, d.blk);
@@ -179,7 +199,7 @@ class c_map {
     }
     //---------------------------------------------------------------------------------------------------------------------------------------------
     //---------------------------------------------------------------------------------------------------------------------------------------------
-    pUnit(d, dt){
+    pUnit(d: any, dt: number){
         //Move if txy set
         if(d.x === d.tx && d.y === d.ty){ } else {
             if(d.mv_current >= d.mv_time){
@@ -191,7 +211,7 @@ class c_map {
     }
     //---------------------------------------------------------------------------------------------------------------------------------------------
     //---------------------------------------------------------------------------------------------------------------------------------------------
-    pProjectile(d, dt){
+    pProjectile(d: any, dt: number){
         if(d.remove === 1){ return; }
         if(d.mvt === 0){//vector
             let mv = this.MoveVec(d, dt, d.blk);
@@ -210,23 +230,23 @@ class c_map {
     }
     //---------------------------------------------------------------------------------------------------------------------------------------------
     //---------------------------------------------------------------------------------------------------------------------------------------------
-    pResource(d, dt){
+    pResource(_d: any, _dt: number){
         //TODO
     }
     //---------------------------------------------------------------------------------------------------------------------------------------------
     //---------------------------------------------------------------------------------------------------------------------------------------------
-    pBuilding(d, dt){
+    pBuilding(_d: any, _dt: number){
         //TODO
     }
     //---------------------------------------------------------------------------------------------------------------------------------------------
     //---------------------------------------------------------------------------------------------------------------------------------------------
-    pEffect(d, dt){
+    pEffect(_d: any, _dt: number){
         //TODO
     }
     //---------------------------------------------------------------------------------------------------------------------------------------------
     //---------------------------------------------------------------------------------------------------------------------------------------------
-    Process(dt){
-        let id;
+    Process(dt: number){
+        let id: string;
 
         for (id in this.statics) { if (this.statics.hasOwnProperty(id)) { this.pStatic(this.statics[id], dt); }}
         for (id in this.dynamics) { if (this.dynamics.hasOwnProperty(id)) { this.pDynamic(this.dynamics[id], dt); }}
@@ -237,9 +257,9 @@ class c_map {
         for (id in this.effects) { if (this.effects.hasOwnProperty(id)) { this.pEffect(this.effects[id], dt); }}
 
         //Update Collision Locations (dynamic, units, projectiles)
-        for (id in this.dynamics) { if (this.dynamics.hasOwnProperty(id)) { this.CD.Update(id, this.dynamics[id]); }}
-        for (id in this.units) { if (this.units.hasOwnProperty(id)) { this.CD.Update(id, this.units[id]); }}
-        for (id in this.projectiles) { if (this.projectiles.hasOwnProperty(id)) { this.CD.Update(id, this.projectiles[id]); }}
+        for (id in this.dynamics) { if (this.dynamics.hasOwnProperty(id)) { this.CD.Update(this.dynamics[id]!); }}
+        for (id in this.units) { if (this.units.hasOwnProperty(id)) { this.CD.Update(this.units[id]!); }}
+        for (id in this.projectiles) { if (this.projectiles.hasOwnProperty(id)) { this.CD.Update(this.projectiles[id]!); }}
 
         //Hit Damage (unit to unit touch)
         //this.UnitHitDetect(this.CD, this.W.unit);
@@ -258,11 +278,11 @@ class c_map {
     }
     //---------------------------------------------------------------------------------------------------------------------------------------------
     //---------------------------------------------------------------------------------------------------------------------------------------------
-    FindEnemyUnit(id, d, range, cwh = 3){
+    FindEnemyUnit(id: any, d: any, range: any, cwh: number = 3){
         //console.log([d.cx, d.cy, id, d.side, cwh])
-        let units = this.CD.GetEnemyList(d.cx, d.cy, id, d.side, cwh);
+        let units = (this.CD as any).GetEnemyList(d.cx, d.cy, id, d.side, cwh);
         //console.log(units)
-        let target = null;
+        let target: any = null;
         let dist = 10000;//default high
         for(let i=0;i<units.length;i++){//[[id, d],...]
             let tid = units[i][0];
@@ -278,12 +298,12 @@ class c_map {
     }
     //---------------------------------------------------------------------------------------------------------------------------------------------
     //---------------------------------------------------------------------------------------------------------------------------------------------
-    UnitHitDetect(CD, Units){
+    UnitHitDetect(CD: any, Units: any){
         let o;
         for ( let id in Units) {
             if (Units.hasOwnProperty(id)) {
                 let d = Units[id];
-                o = CD.IsHit(id, d, "unit", d.side);
+                o = CD.IsHit(d, d.cx, d.cy, "unit", d.side);
                 if(o !== null){ d.u_collide = true; }
                 else { d.u_collide = false; }
             }
@@ -295,27 +315,27 @@ class c_map {
         let o;
         for ( let id in this.units) {
             if (this.units.hasOwnProperty(id)) {
-                let d = this.units[id];
+                let d = this.units[id]!;
 
-                o = this.CD.IsHit(id, d, "projectile", d.side);
+                o = this.CD.IsHit(d, d.cx, d.cy, "projectile", d.side);
                 if(o !== null){//[id, obj]
-                    d.p_collide = true;
-                    d.hp -= o[1].dmg; if(d.hp <=0){d.hp = 0; d.remove = 1;}//death
+                    (d as any).p_collide = true;
+                    d.hp -= (o[1] as any).dmg; if(d.hp <=0){d.hp = 0; d.remove = 1;}//death
                     o[1].remove = 1;//remove projectile
                 }//dead
-                else { d.p_collide = false; }
+                else { (d as any).p_collide = false; }
             }
         }
     }
     //---------------------------------------------------------------------------------------------------------------------------------------------
     //---------------------------------------------------------------------------------------------------------------------------------------------
-    AIRandMove(d){
+    AIRandMove(d: any){
         d.tx = this.RandInt((this.w - 1) * this.ts);//pixel target location (not grid)
         d.ty = this.RandInt((this.h - 1) * this.ts);
     }
     //---------------------------------------------------------------------------------------------------------------------------------------------
     //---------------------------------------------------------------------------------------------------------------------------------------------
-    AIRandMoveSide(d,s){
+    AIRandMoveSide(d: any, s: any){
         d.tx = this.RandInt((this.w - 1) * this.ts);//pixel target location (not grid)
         d.ty = this.RandInt((this.h - 1) * this.ts);
         if(s === 0){d.tx = (this.w * this.ts) - this.ts/2;}
@@ -328,4 +348,4 @@ class c_map {
 }
 //******************************************************************************************************************************
 //******************************************************************************************************************************
-module.exports = c_map;
+export default c_map;

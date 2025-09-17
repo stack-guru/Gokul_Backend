@@ -1,9 +1,16 @@
-const c_grid = require("../core/c_grid");
+import c_grid from "../core/c_grid";
+import { WorldInterface, PlayerData, UnitObject, DynamicObject, ViewData, GridInterface } from '../types';
+
 //Basic .IO World Management
 //***********************************************************************************************************************
 //***********************************************************************************************************************
-class IOWorld {
-    constructor(name, w, h) {
+class IOWorld implements WorldInterface {
+    name: string;
+    w: number;
+    h: number;
+    CD: GridInterface;
+
+    constructor(name: string, w: number, h: number) {
         this.name = name;
         this.w = w; this.h = h;
 
@@ -14,19 +21,19 @@ class IOWorld {
     }
     //------------------------------------------------------------------------------------------------------------------
     //------------------------------------------------------------------------------------------------------------------
-    RandInt(n) { return Math.floor(Math.random() * n); }
+    RandInt(n: number): number { return Math.floor(Math.random() * n); }
     //ObjCreate(type, d){ this.GID++; this[type][this.GID] = d; this.CD.Update(d); return this.GID; }
-    GetUnit(id){ return this.CD.GetObj(id); }
+    GetUnit(id: number): UnitObject | null { return this.CD.GetObj(id) as UnitObject | null; }
         //if(this.units.hasOwnProperty(id)){ return this.units[id]; } return null; }
-    MLerp(start, end, amt)  { return (1-amt)*start+amt*end }
+    MLerp(start: number, end: number, amt: number): number  { return (1-amt)*start+amt*end }
     //--------------------------------------------------------------------------------------------------------------
     //--------------------------------------------------------------------------------------------------------------
-    AABB(A, B) { return ( A.x < B.x + B.w && A.x + A.w > B.x && A.y < B.y + B.h && A.y + A.h > B.y); }
-    CircleCollision(x1, y1, r1, x2, y2, r2) { return ((x1-x2)*(x1-x2) + (y1-y2)*(y1-y2)) <= ((r1 + r2) * (r1 + r2)); }
+    AABB(A: any, B: any): boolean { return ( A.x < B.x + B.w && A.x + A.w > B.x && A.y < B.y + B.h && A.y + A.h > B.y); }
+    CircleCollision(x1: number, y1: number, r1: number, x2: number, y2: number, r2: number): boolean { return ((x1-x2)*(x1-x2) + (y1-y2)*(y1-y2)) <= ((r1 + r2) * (r1 + r2)); }
     //------------------------------------------------------------------------------------------------------------------
     //------------------------------------------------------------------------------------------------------------------
-    CreateDynamic(type, x, y, z, r, w, h, radius, speed, color=0){
-        let d = this.CD.ObjDefault("dynamic", type, x,y,z,r,w,h,radius,speed);
+    CreateDynamic(type: number, x: number, y: number, z: number, r: number, w: number, h: number, radius: number, speed: number, color: number = 0): DynamicObject {
+        let d = this.CD.ObjDefault("dynamic", type, x,y,z,r,w,h,radius,speed) as DynamicObject;
         d.color=color;
         //let d = {cat:"dynamic", id:this.GID, owner:-1, side:0, type:type, x:x, y:y, r:r, w:w, h:h,
             //radius:radius, angle:0, cx:0, cy:0, speed:speed,vx:0, vy:0,remove:0
@@ -39,8 +46,8 @@ class IOWorld {
     }
     //------------------------------------------------------------------------------------------------------------------
     //------------------------------------------------------------------------------------------------------------------
-    CreateUnit(type, x, y, z, r, w, h, radius, speed, color){
-        let d = this.CD.ObjDefault("unit", type, x,y,z,r,w,h,radius,speed);
+    CreateUnit(type: number, x: number, y: number, z: number, r: number, w: number, h: number, radius: number, speed: number, color: number): UnitObject {
+        let d = this.CD.ObjDefault("unit", type, x,y,z,r,w,h,radius,speed) as UnitObject;
         //add data
         d.isAI =0; d.t_time=1; d.t_current=0; d.color=color;d.parts=[];
         d.boost = 0; d.boost_time=0; d.boost_cooldown = 0.5;
@@ -59,25 +66,25 @@ class IOWorld {
     }
     //--------------------------------------------------------------------------------------------------------------
     //--------------------------------------------------------------------------------------------------------------
-    GetNETDynamic(obj){//Simple network Array of Data (Ints)
+    GetNETDynamic(obj: DynamicObject): number[] {//Simple network Array of Data (Ints)
         return [obj.type, Math.floor(obj.x), Math.floor(obj.y), Math.floor(obj.z), Math.floor(obj.r),
-            Math.floor(obj.w), Math.floor(obj.h), Math.floor(obj.radius), obj.angle.toFixed(2),
+            Math.floor(obj.w), Math.floor(obj.h), Math.floor(obj.radius), parseFloat(obj.angle.toFixed(2)),
             obj.color];
     }
     //--------------------------------------------------------------------------------------------------------------
     //--------------------------------------------------------------------------------------------------------------
-    GetNETUnit(obj){//Simple network Array of Data (Ints)
+    GetNETUnit(obj: UnitObject): number[] {//Simple network Array of Data (Ints)
         return [obj.type, Math.floor(obj.x), Math.floor(obj.y), Math.floor(obj.z), Math.floor(obj.r),
-            Math.floor(obj.w), Math.floor(obj.h), Math.floor(obj.radius), obj.angle.toFixed(2),
+            Math.floor(obj.w), Math.floor(obj.h), Math.floor(obj.radius), parseFloat(obj.angle.toFixed(2)),
             Math.floor(obj.hp), Math.floor(obj.max_hp), Math.floor(obj.tx), Math.floor(obj.ty),
-            obj.color,obj.isLead ? 1 : 0, obj.boost, obj.bright];
+            obj.color, (obj as any).isLead ? 1 : 0, obj.boost, (obj as any).bright || 0];
     }
     //------------------------------------------------------------------------------------------------------------------
     //------------------------------------------------------------------------------------------------------------------
-    GetView(d){
-        let key, oid, obj;
+    GetView(d: UnitObject): ViewData {
+        let oid: string, obj: any;
         //let view = {x:x - w/2,y:y - h/2,w:w,h:h};//center around x,y
-        let OUT = { dynamics:{}, units:{} }
+        let OUT: ViewData = { dynamics:{}, units:{} }
         //console.log(view)
 
 //        let cwh = Math.floor((2048 / this.CD.cell_size) / 2);
@@ -97,7 +104,7 @@ class IOWorld {
         //console.time('Pack2');
         for ([oid, obj] of Object.entries(dynamics)) {
             //if(this.AABB(view, obj) === true){ OUT.dynamics[oid] = this.GetNETDynamic(obj); }
-            OUT.dynamics[oid] = this.GetNETDynamic(obj);
+            OUT.dynamics[oid] = this.GetNETDynamic(obj as DynamicObject);
         }
         //console.timeEnd('Pack2');
         //console.time('Pack3');
@@ -108,7 +115,7 @@ class IOWorld {
         //console.time('Pack4');
         for ([oid, obj] of Object.entries(units)) {
             //if(this.AABB(view, obj) === true){ OUT.units[oid] = this.GetNETUnit(obj); }
-            OUT.units[oid] = this.GetNETUnit(obj);
+            OUT.units[oid] = this.GetNETUnit(obj as UnitObject);
         }
         //console.timeEnd('Pack4');
 
@@ -117,7 +124,7 @@ class IOWorld {
     }
     //------------------------------------------------------------------------------------------------------------------
     //------------------------------------------------------------------------------------------------------------------
-    WProcess(dt){
+    WProcess(dt: number): void {
 
         //basic world process
 
@@ -125,7 +132,14 @@ class IOWorld {
         this.CD.Process(dt);
     }
 
+    Process(dt: number): void {
+        this.WProcess(dt);
+    }
+
+    PlayerSpawn(_d: PlayerData): void {
+        // Override in subclasses
+    }
 
 }
 
-module.exports = IOWorld;
+export default IOWorld;

@@ -9,7 +9,11 @@
 // https://github.com/CodingTrain/QuadTree
 
 class Point {
-  constructor(x, y, userData) {
+  x: number;
+  y: number;
+  userData: any;
+
+  constructor(x: number, y: number, userData: any) {
     this.x = x;
     this.y = y;
     this.userData = userData;
@@ -17,14 +21,19 @@ class Point {
 }
 
 class Rectangle {
-  constructor(x, y, w, h) {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+
+  constructor(x: number, y: number, w: number, h: number) {
     this.x = x;
     this.y = y;
     this.w = w;
     this.h = h;
   }
 
-  contains(point) {
+  contains(point: Point): boolean {
     return (
       point.x >= this.x - this.w &&
       point.x <= this.x + this.w &&
@@ -33,7 +42,7 @@ class Rectangle {
     );
   }
 
-  intersects(range) {
+  intersects(range: Rectangle): boolean {
     return !(
       range.x - range.w > this.x + this.w ||
       range.x + range.w < this.x - this.w ||
@@ -45,14 +54,19 @@ class Rectangle {
 
 // circle class for a circle shaped query
 class Circle {
-  constructor(x, y, r) {
+  x: number;
+  y: number;
+  r: number;
+  rSquared: number;
+
+  constructor(x: number, y: number, r: number) {
     this.x = x;
     this.y = y;
     this.r = r;
     this.rSquared = this.r * this.r;
   }
 
-  contains(point) {
+  contains(point: Point): boolean {
     // check if the point is in the circle by checking if the euclidean distance of
     // the point and the center of the circle if smaller or equal to the radius of
     // the circle
@@ -60,7 +74,7 @@ class Circle {
     return d <= this.rSquared;
   }
 
-  intersects(range) {
+  intersects(range: Rectangle): boolean {
     var xDist = Math.abs(range.x - this.x);
     var yDist = Math.abs(range.y - this.y);
 
@@ -84,36 +98,45 @@ class Circle {
 }
 
 class QuadTree {
-  constructor(x, y, w, h, capacity = 4) {
+  boundary: Rectangle;
+  capacity: number;
+  points: Point[];
+  divided: boolean;
+  northeast?: QuadTree;
+  northwest?: QuadTree;
+  southeast?: QuadTree;
+  southwest?: QuadTree;
+
+  constructor(x: number, y: number, w: number, h: number, capacity: number = 4) {
     this.boundary = new Rectangle(x, y, w, h);
     this.capacity = capacity;
     this.points = [];
     this.divided = false;
   }
 
-  CreatePoint(x, y, d){return new Point(x, y, d);}
-  CreateRectangle(x, y, w, h){ return new Rectangle(x, y, w, h); }
-  CreateCircle(x, y, r){return new Circle(x, y, r);}
+  CreatePoint(x: number, y: number, d: any): Point {return new Point(x, y, d);}
+  CreateRectangle(x: number, y: number, w: number, h: number): Rectangle { return new Rectangle(x, y, w, h); }
+  CreateCircle(x: number, y: number, r: number): Circle {return new Circle(x, y, r);}
 
-  subdivide() {
+  subdivide(): void {
     let x = this.boundary.x;
     let y = this.boundary.y;
     let w = this.boundary.w / 2;
     let h = this.boundary.h / 2;
 
     let ne = new Rectangle(x + w, y - h, w, h);
-    this.northeast = new QuadTree(ne, this.capacity);
+    this.northeast = new QuadTree(ne.x, ne.y, ne.w, ne.h, this.capacity);
     let nw = new Rectangle(x - w, y - h, w, h);
-    this.northwest = new QuadTree(nw, this.capacity);
+    this.northwest = new QuadTree(nw.x, nw.y, nw.w, nw.h, this.capacity);
     let se = new Rectangle(x + w, y + h, w, h);
-    this.southeast = new QuadTree(se, this.capacity);
+    this.southeast = new QuadTree(se.x, se.y, se.w, se.h, this.capacity);
     let sw = new Rectangle(x - w, y + h, w, h);
-    this.southwest = new QuadTree(sw, this.capacity);
+    this.southwest = new QuadTree(sw.x, sw.y, sw.w, sw.h, this.capacity);
 
     this.divided = true;
   }
 
-  insert(point) {
+  insert(point: Point): boolean {
     if (!this.boundary.contains(point)) {
       return false;
     }
@@ -128,16 +151,17 @@ class QuadTree {
     }
 
     if (
-      this.northeast.insert(point) ||
-      this.northwest.insert(point) ||
-      this.southeast.insert(point) ||
-      this.southwest.insert(point)
+      this.northeast!.insert(point) ||
+      this.northwest!.insert(point) ||
+      this.southeast!.insert(point) ||
+      this.southwest!.insert(point)
     ) {
       return true;
     }
+    return false;
   }
 
-  query(range, found) {
+  query(range: Rectangle, found?: Point[]): Point[] {
     if (!found) {
       found = [];
     }
@@ -152,14 +176,14 @@ class QuadTree {
       }
     }
     if (this.divided) {
-      this.northwest.query(range, found);
-      this.northeast.query(range, found);
-      this.southwest.query(range, found);
-      this.southeast.query(range, found);
+      this.northwest!.query(range, found);
+      this.northeast!.query(range, found);
+      this.southwest!.query(range, found);
+      this.southeast!.query(range, found);
     }
 
     return found;
   }
 }
 
-module.exports = QuadTree;
+export default QuadTree;

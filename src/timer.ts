@@ -1,16 +1,24 @@
+import { TimerCallback, TimerInterface } from './types';
+
 const NanoTimer = require('nanotimer');
 //time track
 let T0 = Date.now(); let T1 = Date.now(); let T2 = Date.now();
 let T3 = Date.now(); let T4 = Date.now();
 //***********************************************************************************************************************
 //***********************************************************************************************************************
-function GetDT(last){
+function GetDT(last: number): number {
     let now = Date.now(); let dt = now - last; return dt / 1000;//to ms
 }
 //***********************************************************************************************************************
 //***********************************************************************************************************************
-class MyNTimer {
-    constructor(c0, c1, c2, c3, c4) {//callbacks (fastest, fast, slower)
+class MyNTimer implements TimerInterface {
+    NT0: any;
+    NT1: any;
+    NT2: any;
+    NT3: any;
+    NT4: any;
+
+    constructor(c0: TimerCallback, c1: TimerCallback, c2: TimerCallback, c3: TimerCallback, c4: TimerCallback) {//callbacks (fastest, fast, slower)
         this.NT0 = new NanoTimer(); this.NT1 = new NanoTimer(); this.NT2 = new NanoTimer();
         this.NT3 = new NanoTimer(); this.NT4 = new NanoTimer();
 
@@ -25,4 +33,4 @@ class MyNTimer {
     }
 }
 
-module.exports = MyNTimer;
+export default MyNTimer;

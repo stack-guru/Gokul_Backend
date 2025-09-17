@@ -1,7 +1,18 @@
+// Types are imported at world level. Keeping local any types to reduce coupling.
+
 //***********************************************************************************************************************
 //***********************************************************************************************************************
 class IOSnakeManager {
-    constructor(world) {
+    world: any;
+    scale: number;
+    slowSpeed: number;
+    fastSpeed: number;
+    rad: number;
+    slerp: number;
+    LevelXP: number;
+    colors: string[];
+
+    constructor(world: any) {
         this.world = world;
 
         //various quantities that can be changed
@@ -33,31 +44,31 @@ class IOSnakeManager {
 
     //------------------------------------------------------------------------------------------------------------------
     //------------------------------------------------------------------------------------------------------------------
-    rgbToHex(r, g, b) {
-        const toHex = (c) => c.toString(16).padStart(2, '0');
+    rgbToHex(r: number, g: number, b: number): string {
+        const toHex = (c: number) => c.toString(16).padStart(2, '0');
         return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
     }
     //------------------------------------------------------------------------------------------------------------------
     //------------------------------------------------------------------------------------------------------------------
-    CreateSnake(isAI, x, y, size = 5){
+    CreateSnake(isAI: number, x: number, y: number, size: number = 5): number {
         let z = 1000;
         let c = this.world.RandInt(this.colors.length - 1);//Index only needed
         let head = this.world.CreateUnit(1, x, y,z, 0, this.rad * 2,this.rad * 2, this.rad, this.slowSpeed, c);
-        head.isAI = isAI;//1= yes, 0=no
-        head.isLead = true;
-        head.EXP = 500;//Experience for growth (defaults)
-        head.Level = 5;
-        head.bright = 0;
-        head.bright_time = 0;
+        (head as any).isAI = isAI;//1= yes, 0=no
+        (head as any).isLead = true;
+        (head as any).EXP = 500;//Experience for growth (defaults)
+        (head as any).Level = 5;
+        (head as any).bright = 0;
+        (head as any).bright_time = 0;
         let bb = 0;
         for(let i=0;i<size;i++){//tail parts
             z--;//z index for rendering
             let p = this.world.CreateUnit(1, x, y, z, 0, this.rad * 2,this.rad * 2, this.rad, this.slowSpeed, c);
             head.parts.push(p);//link object
-            p.owner = head.id;//id reference to main unit/head
-            p.isLead = false;//not head of snake
-            p.linkIndex = i + 1; // order along body
-            p.bright = bb;//brightness of color for boost
+            (p as any).owner = head.id;//id reference to main unit/head
+            (p as any).isLead = false;//not head of snake
+            (p as any).linkIndex = i + 1; // order along body
+            (p as any).bright = bb;//brightness of color for boost
             bb++;
             if(bb >= 10){bb = 0;}
         }
@@ -65,8 +76,8 @@ class IOSnakeManager {
     }
     //------------------------------------------------------------------------------------------------------------------
     //------------------------------------------------------------------------------------------------------------------
-    AddEXP(head, exp){
-        let i;
+    AddEXP(head: any, exp: number): void {
+        let i: number;
         head.EXP += exp;
         head.LEVEL = Math.floor(head.EXP / this.LevelXP);//100 (higher to take longer to level/grow)
         if(head.LEVEL > 250){head.LEVEL = 250;}//max levels or links
@@ -91,11 +102,11 @@ class IOSnakeManager {
                 let tail = head.parts[head.parts.length - 1];
                 let p = this.world.CreateUnit(1, tail.x, tail.y, tail.z - 1, 0, head.w,head.h, head.radius, 3, head.color);
                 head.parts.push(p);//link object
-                p.owner = head.id;//id reference to main unit/head
-                p.isLead = false;//not head of snake
+                (p as any).owner = head.id;//id reference to main unit/head
+                (p as any).isLead = false;//not head of snake
                 p.angle = tail.angle;//match rot
-                p.bright = tail.bright + 1;//brightness of color for boost
-                if(p.bright >= 10){p.bright = 0;}
+                (p as any).bright = (tail as any).bright + 1;//brightness of color for boost
+                if((p as any).bright >= 10){(p as any).bright = 0;}
             }
         }
 
@@ -106,8 +117,8 @@ class IOSnakeManager {
     }
     //------------------------------------------------------------------------------------------------------------------
     //------------------------------------------------------------------------------------------------------------------
-    LoseEXP(head, exp){
-        let i;
+    LoseEXP(head: any, exp: number): void {
+        let i: number;
         head.EXP -= exp;
         head.LEVEL = Math.floor(head.EXP / this.LevelXP);//100 (higher to take longer to level/grow)
         if(head.LEVEL > 250){head.LEVEL = 250;}//max levels or links
@@ -133,12 +144,12 @@ class IOSnakeManager {
             let tail = head.parts[head.parts.length - 1];
             let frad = 15;//standard food = 15 radius
             let d = this.world.CreateDynamic(1, tail.x, tail.y, 0, 0, frad * 2, frad * 2, frad, 5, head.color);
-            d.origin_x = tail.x;  d.origin_y = tail.y;
+            (d as any).origin_x = tail.x;  (d as any).origin_y = tail.y;
         }
 
     }
 
-    drawSmoothCurveQuadratic(context, points) {
+    drawSmoothCurveQuadratic(context: any, points: any[]): void {
         context.beginPath();
         context.moveTo(points[0].x, points[0].y);
 
@@ -151,7 +162,7 @@ class IOSnakeManager {
         context.lineTo(points[points.length - 1].x, points[points.length - 1].y);
         context.stroke();
     }
-    getDistance(p1, p2) {
+    getDistance(p1: any, p2: any): number {
         const dx = p1.x - p2.x;
         const dy = p1.y - p2.y;
         return Math.sqrt(dx * dx + dy * dy);
@@ -159,8 +170,8 @@ class IOSnakeManager {
     //------------------------------------------------------------------------------------------------------------------
     //Tail parts
     //------------------------------------------------------------------------------------------------------------------
-    moveTo(obj,dt) {
-        let last, curr;
+    moveTo(obj: any, dt: number): void {
+        let last: any, curr: any;
 
         //const baseSpeed = config.snake.BASE_SPEED;
         //const speedRatio = this.speed / this.slowSpeed;
@@ -245,7 +256,7 @@ class IOSnakeManager {
     }
     //------------------------------------------------------------------------------------------------------------------
     //------------------------------------------------------------------------------------------------------------------
-    SimpleRotateTo(angle, target, spd){
+    SimpleRotateTo(angle: number, target: number, spd: number): number {
         let angleDifference = target - angle;
 
         // Normalize the angle difference to be within -PI to PI
@@ -268,7 +279,7 @@ class IOSnakeManager {
     }
     //------------------------------------------------------------------------------------------------------------------
     //------------------------------------------------------------------------------------------------------------------
-    slither (obj, dt) {
+    slither (obj: any, dt: number): void {
         //let head = obj.parts[0];
         //console.log(dt)
 
@@ -311,7 +322,7 @@ class IOSnakeManager {
     }
     //------------------------------------------------------------------------------------------------------------------
     //------------------------------------------------------------------------------------------------------------------
-    DoDeath(obj){
+    DoDeath(obj: any): void {
         //spawn extra food
         this.world.DeathFood(obj.parts);
         for (let i = 0; i < obj.parts.length; i++) {
@@ -320,8 +331,8 @@ class IOSnakeManager {
     }
     //------------------------------------------------------------------------------------------------------------------
     //------------------------------------------------------------------------------------------------------------------
-    CheckSnakeHeads(obj, dt){
-        let tobj, tid;
+    CheckSnakeHeads(obj: any, dt: number): void {
+        let tobj: any;
 
         //other snake check
         let res = this.CheckHeadHit(obj);
@@ -338,7 +349,7 @@ class IOSnakeManager {
         //Faster Collect (optimized)
         let fres = this.world.CD.IsObjHitAreaOXYFaster(obj, "dynamic")
         if(fres !== null){
-            tid = fres[0]; tobj = fres[1];
+            tobj = fres[1];
             tobj.remove = 1;//flag to remove this food
 
             //EXP based System
@@ -361,7 +372,7 @@ class IOSnakeManager {
     }
     //------------------------------------------------------------------------------------------------------------------
     //------------------------------------------------------------------------------------------------------------------
-    CheckHeadHit(d){
+    CheckHeadHit(d: any): [string, any] | null {
         //console.time('Check');
         //let units = this.world.CD.GetObjsArea(d.cx, d.cy, "unit");
 
@@ -369,12 +380,13 @@ class IOSnakeManager {
         let units = this.world.CD.GetOtherObjsArea4(d.x, d.y, "unit")
         //console.timeEnd('Check');
         for (let [oid, obj] of Object.entries(units)) {
-            if(obj.id !== d.id){//not same head of snake
-                if(obj.owner !== d.id){//not part of this snake
+            const o: any = obj;
+            if(o.id !== d.id){//not same head of snake
+                if((o as any).owner !== d.id){//not part of this snake
                     //Used Lagged last x/y
-                    if(this.world.CD.CircleCollision(d.ox, d.oy, d.radius/2, obj.x, obj.y, obj.radius)){
+                    if(this.world.CD.CircleCollision(d.ox, d.oy, d.radius/2, o.x, o.y, o.radius)){
                     //if(this.world.CD.CircleCollision(d.x, d.y, d.radius/2, obj.x, obj.y, obj.radius)){
-                        return [oid, obj];
+                        return [oid, o];
                     }
                 }
             }
@@ -383,4 +395,4 @@ class IOSnakeManager {
     }
 }
 
-module.exports = IOSnakeManager;
+export default IOSnakeManager;

@@ -1,8 +1,16 @@
+import { GameObject, GridInterface } from '../types';
+
 //*********************************************************************************************************************************************
 //Spatial Grid Collision
 //*********************************************************************************************************************************************
-class c_grid {
-    constructor(cs) {
+class c_grid implements GridInterface {
+    GID: number;
+    cell_size: number;
+    cell_size_mid: number;
+    cells: { [key: string]: { [key: string]: GameObject } };
+    all: { [key: string]: GameObject };
+
+    constructor(cs: number) {
         this.GID = 0;
         this.cell_size = cs;//pixels
         this.cell_size_mid = cs/2;//pixels
@@ -11,13 +19,13 @@ class c_grid {
     }
     //--------------------------------------------------------------------------------------------------------------
     //--------------------------------------------------------------------------------------------------------------
-    AABB(A, B) { return ( A.x < B.x + B.w && A.x + A.w > B.x && A.y < B.y + B.h && A.y + A.h > B.y); }
-    CircleCollision(x1, y1, r1, x2, y2, r2) { return ((x1-x2)*(x1-x2) + (y1-y2)*(y1-y2)) <= ((r1 + r2) * (r1 + r2)); }
-    cdKey(cx, cy){return "c" + cx + "-" + cy; }
-    GetObj(id){ if(this.all.hasOwnProperty(id)){ return this.all[id]; } return null; }
+    AABB(A: GameObject, B: GameObject): boolean { return ( A.x < B.x + B.w && A.x + A.w > B.x && A.y < B.y + B.h && A.y + A.h > B.y); }
+    CircleCollision(x1: number, y1: number, r1: number, x2: number, y2: number, r2: number): boolean { return ((x1-x2)*(x1-x2) + (y1-y2)*(y1-y2)) <= ((r1 + r2) * (r1 + r2)); }
+    cdKey(cx: number, cy: number): string {return "c" + cx + "-" + cy; }
+    GetObj(id: number): GameObject | null { return this.all[id] ?? null; }
     //--------------------------------------------------------------------------------------------------------------
     //--------------------------------------------------------------------------------------------------------------
-    ObjDefault(cat, type, x,y,z,r,w,h,rad,spd){
+    ObjDefault(cat: string, type: number, x: number, y: number, z: number, r: number, w: number, h: number, rad: number, spd: number): GameObject {
         this.GID++;
         //basic required object data (any)
         return { id:this.GID, cat:cat, type:type, side:-1, owner:-1,
@@ -27,13 +35,14 @@ class c_grid {
     }
     //--------------------------------------------------------------------------------------------------------------
     //--------------------------------------------------------------------------------------------------------------
-    CountCell(ckey){
-        if (this.cells.hasOwnProperty(ckey)) { return Object.keys(this.cells[ckey]).length; } return 0;
+    CountCell(ckey: string): number {
+        const cell = this.cells[ckey];
+        if (cell) { return Object.keys(cell).length; } return 0;
     }
     //--------------------------------------------------------------------------------------------------------------
     //--------------------------------------------------------------------------------------------------------------
-    GetAllObjs(cat){
-        let out = {};
+    GetAllObjs(cat: string): { [key: string]: GameObject } {
+        let out: { [key: string]: GameObject } = {};
         for (let [oid, obj] of Object.entries(this.all)) {
             if(obj.cat === cat){ out[oid] = obj; }
         }
@@ -41,40 +50,41 @@ class c_grid {
     }
     //--------------------------------------------------------------------------------------------------------------
     //--------------------------------------------------------------------------------------------------------------
-    CleanAllObjs(){
-        for (let [oid, obj] of Object.entries(this.all)) {
+    CleanAllObjs(): void {
+        for (let [_oid, obj] of Object.entries(this.all)) {
             if(obj.remove === 1){ this.Remove(obj);}
         }
     }
     //--------------------------------------------------------------------------------------------------------------
     //--------------------------------------------------------------------------------------------------------------
-    GetCellObjs(cx, cy){
+    GetCellObjs(cx: number, cy: number): { [key: string]: GameObject } {
         let ckey = this.cdKey(cx, cy);
-        if (this.cells.hasOwnProperty(ckey)) { return this.cells[ckey]; } return {};
+        const cell = this.cells[ckey];
+        if (cell) { return cell; } return {};
     }
     //--------------------------------------------------------------------------------------------------------------
     //--------------------------------------------------------------------------------------------------------------
-    CountAll(){
+    CountAll(): number {
         let count=0; let C = this.cells;
-        Object.keys(C).forEach(ckey => { count += Object.keys(C[ckey]).length; });
+        Object.keys(C).forEach(ckey => { const cell = C[ckey]; if(cell){ count += Object.keys(cell).length; }});
         return count;
     }
     //--------------------------------------------------------------------------------------------------------------
     //--------------------------------------------------------------------------------------------------------------
-    Add(d) {
+    Add(d: GameObject): void {
         let key = this.cdKey(d.cx, d.cy);
-        if(this.cells.hasOwnProperty(key)){ this.cells[key][d.id] = d; }
-        else { this.cells[key] = {}; this.cells[key][d.id] = d; }//auto create cell if needed
+        if(this.cells.hasOwnProperty(key) && this.cells[key]){ this.cells[key][d.id] = d; }
+        else { this.cells[key] = {}; this.cells[key]![d.id] = d; }//auto create cell if needed
         if(this.all.hasOwnProperty(d.id) === false){ this.all[d.id] = d; }//global
     }
     //--------------------------------------------------------------------------------------------------------------
     //--------------------------------------------------------------------------------------------------------------
-    Remove(d){
+    Remove(d: GameObject): void {
         let key = this.cdKey(d.cx, d.cy);
-        if(this.cells.hasOwnProperty(key)){
-            if(this.cells[key].hasOwnProperty(d.id)){
-                this.cells[key][d.id] = null;//release first
-                delete this.cells[key][d.id];
+        if(this.cells.hasOwnProperty(key) && this.cells[key]){
+            if(this.cells[key]!.hasOwnProperty(d.id)){
+                this.cells[key]![d.id] = null as any;//release first
+                delete this.cells[key]![d.id];
             }
         }
         if(this.all.hasOwnProperty(d.id)){ delete this.all[d.id]; }//global
@@ -82,13 +92,13 @@ class c_grid {
     //--------------------------------------------------------------------------------------------------------------
     //Update when moved or created
     //--------------------------------------------------------------------------------------------------------------
-    Update(d){
+    Update(d: GameObject): void {
         if(d.remove === 1){ return; }//remove and skip
 
         //remove current if any
         let key = this.cdKey(d.cx, d.cy);
-        if(this.cells.hasOwnProperty(key)){
-            if(this.cells[key].hasOwnProperty(d.id)){ delete this.cells[key][d.id]; }
+        if(this.cells.hasOwnProperty(key) && this.cells[key]){
+            if(this.cells[key]!.hasOwnProperty(d.id)){ delete this.cells[key]![d.id]; }
         }
 
         //add too new cell
@@ -98,14 +108,14 @@ class c_grid {
     }
     //--------------------------------------------------------------------------------------------------------------
     //--------------------------------------------------------------------------------------------------------------
-    GetCellObjsFilter(cx, cy, cat, id = -1, skip_side = -1, type = -1){
-        let out = {};
+    GetCellObjsFilter(cx: number, cy: number, cat: string, id: number = -1, skip_side: number = -1, type: number = -1): { [key: string]: GameObject } {
+        let out: { [key: string]: GameObject } = {};
         let objs = this.GetCellObjs(cx, cy);
         //if(Object.keys(objs).length > 0){ console.log(Object.keys(objs).length);}
 
         for (const oid in objs) {//Faster
             if (objs.hasOwnProperty(oid)) {
-                const obj = objs[oid];
+                const obj = objs[oid]!;
                 if(obj.remove === 1){ continue; } //already flagged to remove, skip it
                 if(obj.cat !== cat){ continue; } //match required category (dynamic, static, unit, building, etc...)
                 if(skip_side !== -1){ if(obj.side === skip_side){ continue; } }//skip side (enemy) (if set >= 0)
@@ -131,8 +141,8 @@ class c_grid {
     //--------------------------------------------------------------------------------------------------------------
     //Get many cell objects -  static, dynamic, units, items, etc..
     //--------------------------------------------------------------------------------------------------------------
-    GetObjsArea(tcx, tcy, cat, id = -1, skip_side = -1, type = -1, cwh = 1){
-        let objs = {};
+    GetObjsArea(tcx: number, tcy: number, cat: string, id: number = -1, skip_side: number = -1, _type: number = -1, cwh: number = 1): { [key: string]: GameObject } {
+        let objs: { [key: string]: GameObject } = {};
 
         for (let cy = tcy - cwh; cy <= tcy + cwh; cy++) {//surrounding cells
             for (let cx = tcx - cwh; cx <= tcx + cwh; cx++) {
@@ -144,8 +154,8 @@ class c_grid {
         return objs;
     }
     //--------------------------------------------------------------------------------------------------------------
-    Get4Quad(cat, tcx, tcy){
-        let out = {};
+    Get4Quad(cat: string, tcx: number, tcy: number): { [key: string]: GameObject } {
+        let out: { [key: string]: GameObject } = {};
         for (let cy = tcy; cy <= tcy + 2; cy++) {//4 cells only
             for (let cx = tcx; cx <= tcx + 2; cx++) {
                 //A bit SLOW
@@ -154,7 +164,7 @@ class c_grid {
                 let objs = this.GetCellObjs(cx, cy);
                 for (let oid in objs) {//Faster
                     if (objs.hasOwnProperty(oid)) {
-                        let obj = objs[oid];
+                        let obj = objs[oid]; if(!obj){ continue; }
                         if(obj.cat !== cat){ continue; } //match required category (dynamic, static, unit, building, etc...)
                         out[oid] = obj;
                     }
@@ -167,7 +177,7 @@ class c_grid {
     //--------------------------------------------------------------------------------------------------------------
     //Get many cell objects (optimized to just 4 cells only, non id) -  static, dynamic, units, items, etc..
     //--------------------------------------------------------------------------------------------------------------
-    GetOtherObjsArea4(x, y, cat){
+    GetOtherObjsArea4(x: number, y: number, cat: string): { [key: string]: GameObject } {
         let cx = Math.floor(x / this.cell_size);
         let cy = Math.floor(y / this.cell_size);
         let ox = x - (cx * this.cell_size);
@@ -190,8 +200,8 @@ class c_grid {
     //--------------------------------------------------------------------------------------------------------------
     //Get many cell objects (Optimized for player views) -  static, dynamic, units, items, etc..
     //--------------------------------------------------------------------------------------------------------------
-    GetObjsAreaFAST(tcx, tcy, cat, cwh){
-        let out = {};
+    GetObjsAreaFAST(tcx: number, tcy: number, cat: string, cwh: number): { [key: string]: GameObject } {
+        let out: { [key: string]: GameObject } = {};
 
         //console.time('PackGroup');
         for (let cy = tcy - cwh; cy <= tcy + cwh; cy++) {//surrounding cells
@@ -199,7 +209,7 @@ class c_grid {
                 let objs = this.GetCellObjs(cx, cy);
                 for (let oid in objs) {//Faster
                     if (objs.hasOwnProperty(oid)) {
-                        let obj = objs[oid];
+                        let obj = objs[oid]; if(!obj){ continue; }
                         if(obj.cat !== cat){ continue; } //match required category (dynamic, static, unit, building, etc...)
                         out[oid] = obj;
                     }
@@ -211,7 +221,7 @@ class c_grid {
     //--------------------------------------------------------------------------------------------------------------
     //Check for aabb hit (with filtering if needed)
     //--------------------------------------------------------------------------------------------------------------
-    IsHit(d, cx, cy, cat, skip_side = -1, type = -1){
+    IsHit(d: GameObject, cx: number, cy: number, cat: string, skip_side: number = -1, type: number = -1): [string, GameObject] | null {
         let objs = this.GetCellObjsFilter(cx, cy, cat, d.id, skip_side, type);//skip this objects id always
         for (let [oid, obj] of Object.entries(objs)) {//already filtered down
             //if(this.AABB(d, obj) === true){ return [oid, obj]; }
@@ -224,7 +234,7 @@ class c_grid {
     //--------------------------------------------------------------------------------------------------------------
     // Check Cells for a Hit (current and surrounding)
     //--------------------------------------------------------------------------------------------------------------
-    IsObjHitArea(d, cat, skip_side = -1, type = -1, cwh = 1) {
+    IsObjHitArea(d: GameObject, cat: string, skip_side: number = -1, type: number = -1, _cwh: number = 1): [string, GameObject] | null {
 
         let objs = this.GetObjsArea(d.cx, d.cy, cat, d.id, skip_side, type);//skip this objects id always
         for (let [oid, obj] of Object.entries(objs)) {//already filtered down
@@ -238,12 +248,12 @@ class c_grid {
     //--------------------------------------------------------------------------------------------------------------
     // Check Cells for a Hit (current and surrounding) - Offset
     //--------------------------------------------------------------------------------------------------------------
-    IsObjHitAreaOXY(d, cat, skip_side = -1, type = -1, cwh = 1) {
+    IsObjHitAreaOXY(d: GameObject, cat: string, skip_side: number = -1, type: number = -1, _cwh: number = 1): [string, GameObject] | null {
 
         let objs = this.GetObjsArea(d.cx, d.cy, cat, d.id, skip_side, type);//skip this objects id always
         for (let [oid, obj] of Object.entries(objs)) {//already filtered down
             //if(this.AABB(d, obj) === true){ return [oid, obj]; }
-            if(this.CircleCollision(d.ox, d.oy, d.radius, obj.x, obj.y, obj.radius)){
+            if(this.CircleCollision(d.ox || d.x, d.oy || d.y, d.radius, obj.x, obj.y, obj.radius)){
                 return [oid, obj];
             }
         }
@@ -252,13 +262,13 @@ class c_grid {
     //--------------------------------------------------------------------------------------------------------------
     // Check Cells for a Hit (current and surrounding) - Offset
     //--------------------------------------------------------------------------------------------------------------
-    IsObjHitAreaOXYFaster(d, cat) {
+    IsObjHitAreaOXYFaster(d: GameObject, cat: string): [string, GameObject] | null {
 
         //let objs = this.GetObjsArea(d.cx, d.cy, cat, d.id, skip_side, type);//skip this objects id always
         let objs = this.GetOtherObjsArea4(d.x, d.y, cat);
         for (let [oid, obj] of Object.entries(objs)) {//already filtered down
             //if(this.AABB(d, obj) === true){ return [oid, obj]; }
-            if(this.CircleCollision(d.ox, d.oy, d.radius, obj.x, obj.y, obj.radius)){
+            if(this.CircleCollision(d.ox || d.x, d.oy || d.y, d.radius, obj.x, obj.y, obj.radius)){
                 return [oid, obj];
             }
         }
@@ -267,10 +277,10 @@ class c_grid {
     //--------------------------------------------------------------------------------------------------------------
     //Basic Grid Processing
     //--------------------------------------------------------------------------------------------------------------
-    Process(dt){
+    Process(_dt: number): void {
 
         //Update Cells (after movement etc)
-        for (let [oid, obj] of Object.entries(this.all)) {
+        for (let [, obj] of Object.entries(this.all)) {
             this.Update(obj);
         }
 
@@ -281,4 +291,4 @@ class c_grid {
 }
 //******************************************************************************************************************************
 //******************************************************************************************************************************
-module.exports = c_grid;
+export default c_grid;

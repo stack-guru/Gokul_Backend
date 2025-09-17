@@ -1,10 +1,11 @@
-const IOWorld = require('./world');
+import IOWorld from './world';
+
 //AGAR Like .IO World
 //***********************************************************************************************************************
 //Circles Eat food and die on larger Circles
 //***********************************************************************************************************************
 class AgarWorld extends IOWorld {
-    constructor(name, w, h) {
+    constructor(name: string, w: number, h: number) {
         super(name, w, h);
 
         //Spawn Starting Food
@@ -15,14 +16,14 @@ class AgarWorld extends IOWorld {
     }
     //------------------------------------------------------------------------------------------------------------------
     //------------------------------------------------------------------------------------------------------------------
-    Process(dt){
-        let id;
+    override Process(_dt: number): void {
+        let id: string;
 
         //for (id in this.statics) { if (this.statics.hasOwnProperty(id)) { this.pStatic(this.statics[id], dt); }}
-        for (id in this.dynamics) { if (this.dynamics.hasOwnProperty(id)) {
+        for (id in (this as any).dynamics) { if ((this as any).dynamics.hasOwnProperty(id)) {
 
         }}
-        for (id in this.units) { if (this.units.hasOwnProperty(id)) {
+        for (id in (this as any).units) { if ((this as any).units.hasOwnProperty(id)) {
 
         }}
 
@@ -31,11 +32,11 @@ class AgarWorld extends IOWorld {
         //for (id in this.units) { if (this.units.hasOwnProperty(id)) { this.CD.Update(id, this.units[id]); }}
 
         //auto clean up (dead etc)
-        this.rmGroupCD(this.dynamics);
-        this.rmGroupCD(this.units);
+        (this as any).rmGroupCD((this as any).dynamics);
+        (this as any).rmGroupCD((this as any).units);
 
     }
 
 }
 
-module.exports = AgarWorld;
+export default AgarWorld;

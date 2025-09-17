@@ -1,11 +1,17 @@
-const IOWorld = require('./world');
-const IOSnakeMgr = require('./objs/snake');
+import IOWorld from './world';
+import IOSnakeMgr from './objs/snake';
+import { PlayerData } from '../types';
+
 //AGAR Like .IO World
 //***********************************************************************************************************************
 //Snakes Eat food and Die on Snakes Tails
 //***********************************************************************************************************************
 class SlitherWorld extends IOWorld {
-    constructor(name, w, h) {
+    food_limit: number;
+    snake_min: number;
+    SM: any;
+
+    constructor(name: string, w: number, h: number) {
         super(name, w, h);
 
         this.food_limit = 4000;
@@ -14,7 +20,7 @@ class SlitherWorld extends IOWorld {
     }
     //------------------------------------------------------------------------------------------------------------------
     //------------------------------------------------------------------------------------------------------------------
-    PlayerSpawn(d){
+    override PlayerSpawn(d: PlayerData): void {
         let x = this.RandInt(this.w);//random in world
         let y = this.RandInt(this.h);
         //x = this.w/2; y = this.h/2;
@@ -22,12 +28,14 @@ class SlitherWorld extends IOWorld {
         let ty = this.RandInt(this.h);//random in world
         d.uid = this.SM.CreateSnake(0, x, y,50);
         let unit = this.GetUnit(d.uid);
-        unit.tx = tx; unit.ty = ty;
+        if(unit) {
+            unit.tx = tx; unit.ty = ty;
+        }
         console.log("SpawnSnake: " + x + ", " + y + " " + d.uid);
     }
     //------------------------------------------------------------------------------------------------------------------
     //------------------------------------------------------------------------------------------------------------------
-    CheckFood(){
+    CheckFood(): void {
         let f = Object.keys(this.CD.GetAllObjs("dynamic")).length;
         if(f < this.food_limit / 2){//leave room for death food
             for (let i = 0; i < 10; i++) {
@@ -35,10 +43,10 @@ class SlitherWorld extends IOWorld {
                 let x = this.RandInt(this.w);//random in world
                 let y = this.RandInt(this.h);
                 if(this.CD.CircleCollision(x, y, rad, this.w/2, this.h/2, this.w/2) === true){
-                    let c = this.RandInt(this.SM.colors.length - 1);//Index only needed
+                    let c = this.RandInt((this.SM as any).colors.length - 1);//Index only needed
                     let d = this.CreateDynamic(1, x, y, 0, 0, rad * 2, rad * 2, rad, this.RandInt(10) + 40, c);
-                    d.origin_x = x;
-                    d.origin_y = y;
+                    (d as any).origin_x = x;
+                    (d as any).origin_y = y;
                 }
 
             }
@@ -47,7 +55,7 @@ class SlitherWorld extends IOWorld {
     }
     //------------------------------------------------------------------------------------------------------------------
     //------------------------------------------------------------------------------------------------------------------
-    DeathFood(parts){
+    DeathFood(parts: any[]): void {
         let f = Object.keys(this.CD.GetAllObjs("dynamic")).length;
         if(f < this.food_limit + parts.length){//better optimized (one food amount check)
             for (let i = 0; i < parts.length; i+=2) {
@@ -56,7 +64,7 @@ class SlitherWorld extends IOWorld {
                 let rad = this.RandInt(10) + 20;//standard food = 68 radius
                 if(this.CD.CircleCollision(x, y, rad, this.w/2, this.h/2, this.w/2) === true) {
                     let d = this.CreateDynamic(1, x, y, 0,0, rad * 2,rad * 2, rad, this.RandInt(10) + 20, c);
-                    d.origin_x = x; d.origin_y = y;
+                    (d as any).origin_x = x; (d as any).origin_y = y;
                 }
             }
         }
@@ -64,10 +72,10 @@ class SlitherWorld extends IOWorld {
     }
     //------------------------------------------------------------------------------------------------------------------
     //------------------------------------------------------------------------------------------------------------------
-    CheckSnakes(){
+    CheckSnakes(): void {
         let s = this.SnakeHeads();
         if(s < this.snake_min){
-            let side = this.RandInt(4);
+            // let side = this.RandInt(4);
             let x = this.RandInt(this.w);//random in world
             let y = this.RandInt(this.h);
             //sides only for AI
@@ -80,27 +88,27 @@ class SlitherWorld extends IOWorld {
             //Open Area
             let units = this.CD.GetOtherObjsArea4(x, y, "unit");
             if(Object.keys(units).length === 0){
-                this.SM.CreateSnake(1, x, y);
+                (this.SM as any).CreateSnake(1, x, y);
             }
             //console.log(s)
         }
     }
     //------------------------------------------------------------------------------------------------------------------
     //------------------------------------------------------------------------------------------------------------------
-    SnakeHeads(){
+    SnakeHeads(): number {
         let count = 0;
         let units = this.CD.GetAllObjs("unit");
         //console.log(units)
 
         for (let [oid, d] of Object.entries(units)) {
-            if(d.isLead){ count++; }//head only
+            if((d as any).isLead){ count++; }//head only
             //console.log(d)
         }
         return count;
     }
     //------------------------------------------------------------------------------------------------------------------
     //------------------------------------------------------------------------------------------------------------------
-    MoveTXY (x, y, tx, ty, speed, dt){
+    MoveTXY (x: number, y: number, tx: number, ty: number, speed: number, dt: number): [number, number] {
         if(x === tx && y === ty){ return [x,y]; }
         let vx = tx - x; let vy = ty - y;
         let dest = Math.sqrt(vx * vx + vy * vy);
@@ -112,8 +120,8 @@ class SlitherWorld extends IOWorld {
     }
     //------------------------------------------------------------------------------------------------------------------
     //------------------------------------------------------------------------------------------------------------------
-    Process(dt){
-        let oid, d;
+    override Process(dt: number): void {
+        let oid: string, d: any;
 
         //Add food or ai snakes if needed (not very often)
         if(this.RandInt(100) > 90){
@@ -129,23 +137,23 @@ class SlitherWorld extends IOWorld {
 
         for ([oid, d] of Object.entries(units)) {
             //console.log(oid)
-            if(d.isLead){//head only
-                if(d.isAI === 1){
-                    if(d.t_current >= d.t_time){
+            if((d as any).isLead){//head only
+                if((d as any).isAI === 1){
+                    if((d as any).t_current >= (d as any).t_time){
                         d.tx = this.RandInt(this.w);//pixel target location
                         d.ty = this.RandInt(this.h);
                         //console.log([d.x, d.tx, d.y, d.ty]);
-                        d.t_current = 0; d.t_time = this.RandInt(5)+ 2;
+                        (d as any).t_current = 0; (d as any).t_time = this.RandInt(5)+ 2;
                         //console.log("moving...")
-                        d.boost = this.RandInt(2);//random boost
+                        (d as any).boost = this.RandInt(2);//random boost
                         //console.log(d.boost)
                     }
-                    d.t_current +=dt;
+                    (d as any).t_current +=dt;
                 }
                 if(d.x === d.tx && d.y === d.ty){}
-                else { this.SM.slither(d, dt); }
+                else { (this.SM as any).slither(d, dt); }
                 //console.time('Check');
-                this.SM.CheckSnakeHeads(d, dt);
+                (this.SM as any).CheckSnakeHeads(d, dt);
                 //console.timeEnd('Check');
                 //this.SM.CheckSnakeHeads(d.parts[0]);
             }
@@ -161,8 +169,8 @@ class SlitherWorld extends IOWorld {
 
             //Random movement around origin x, y
             if(d.x === d.tx && d.y === d.ty){
-                d.tx = d.origin_x + (this.RandInt(64) - 32);
-                d.ty = d.origin_y + (this.RandInt(64) - 32);
+                d.tx = (d as any).origin_x + (this.RandInt(64) - 32);
+                d.ty = (d as any).origin_y + (this.RandInt(64) - 32);
 
                 /*
                 //TODO do on Snake Moves not per FOOD (slow)
@@ -213,4 +221,4 @@ class SlitherWorld extends IOWorld {
     }
 }
 
-module.exports = SlitherWorld;
+export default SlitherWorld;
