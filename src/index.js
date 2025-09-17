@@ -3,12 +3,12 @@ require('dotenv').config() //console.log(process.env)
 var msgpack = require("msgpack-lite");
 //const fs = require('fs'); // For reading certificate files
 //const WebSocket = require('ws');
-const NTimer = require('./src/timer');
-const PM = require('./src/player');
+const NTimer = require('./timer');
+const PM = require('./player');
 
 //Game Worlds
-const AGAR = require('./src/worlds/agar-io');
-const SLITHER = require('./src/worlds/slither-io');
+const AGAR = require('./worlds/agar-io');
+const SLITHER = require('./worlds/slither-io');
 //TODO Add more types!!
 //***********************************************************************************************************************
 //Config SSL or Not (local development)
