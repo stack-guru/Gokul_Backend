@@ -203,7 +203,7 @@ class c_map {
         //Move if txy set
         if(d.x === d.tx && d.y === d.ty){ } else {
             if(d.mv_current >= d.mv_time){
-                let mv = this.MoveSlide(d, dt);
+                this.MoveSlide(d, dt);
                 d.mv_current = 0;
             }
             d.mv_current +=dt;

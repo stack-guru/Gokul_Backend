@@ -26,22 +26,16 @@ const cert_file = "/opt/bitnami/nginx/conf/game.iceturtlestudios.com.crt";
 //const GIO = require('@geckos.io/server');
 //***********************************************************************************************************************
 //***********************************************************************************************************************
-// unused for now
-let hSERVER: any;
-if((process.env as any)['USE_SSL'] === "TRUE"){
-    hSERVER = createHttpsServer({ key: fs.readFileSync(pem_file), cert: fs.readFileSync(cert_file) });
-    console.log("- USING HTTPS -")
-}
-else {
-    hSERVER = createServer();
-}
-
+// unused for now - keep logic but assign to void to avoid unused var
+const hSERVER: any = ((process.env as any)['USE_SSL'] === "TRUE")
+    ? createHttpsServer({ key: fs.readFileSync(pem_file), cert: fs.readFileSync(cert_file) })
+    : createServer();
+console.log('hSERVER = ', hSERVER);
 //const io = new Server(hSERVER, {
-    //cors: { origin: "*"}//"https://example.com"
+//cors: { origin: "*"}//"https://example.com"
 //});//CORS ->https://socket.io/docs/v4/handling-cors/
 //***********************************************************************************************************************
 //***********************************************************************************************************************
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 let MyTimer: any = null;
 let MyPM: any = null;
 let MyWorld: any = null;
@@ -61,10 +55,10 @@ async function Init(): Promise<void> {
 
     let wtype: number = 0;//default
     let w_wh: number = 10000;
-    if(wtype === 0){ MyWorld = new SLITHER("Slither", w_wh, w_wh); }
+    if (wtype === 0) { MyWorld = new SLITHER("Slither", w_wh, w_wh); }
     //if(wtype === 1){ MyWorld = new AGAR("Agar", 1024, 1024); }
 
-    if(MyWorld){
+    if (MyWorld) {
 
         app.get('/', (_req: any, res: any) => {
             res.send('Game Server!');
@@ -74,6 +68,7 @@ async function Init(): Promise<void> {
         MyTimer = new NTimer(P0, P1, P2, P3, P4);
         MyPM = new PM(MyWorld);//Use World obj here
 
+        console.log('MyTimer = ', MyTimer);
         //Setup Websockets
         wss.on('connection', (ws: WebSocket) => {
             console.log('Client connected');
@@ -84,12 +79,12 @@ async function Init(): Promise<void> {
             ws.on('message', (d: any) => {
                 //d = JSON.parse(d);
                 try {
-                    if(d.length > 50){ return; }//
+                    if (d.length > 50) { return; }//
                     d = JSON.parse(d);
-                    if(d.type === "input"){//force Int
+                    if (d.type === "input") {//force Int
                         MyPM.Input(ws, parseInt(d.d[0]), parseInt(d.d[1]), parseInt(d.d[2]));//target offset (direction)
                     }
-                    if(d.type === "ping"){
+                    if (d.type === "ping") {
                         ws.send(msgpack.encode({ type: "pong", timestamp: d.timestamp }));
                         //ws.send(JSON.stringify({ type: "pong", timestamp: d.timestamp }));
                     }
@@ -121,10 +116,10 @@ async function Init(): Promise<void> {
         console.log(`Server listening on port ${PORT}`);
     });
 
-    const interval = setInterval(function ping() {
+    setInterval(function ping() {
         wss.clients.forEach(function each(ws: WebSocket) {
             console.log("PING Client")
-            if ((ws as any).isAlive === false){
+            if ((ws as any).isAlive === false) {
                 MyPM.Remove(ws);
                 return ws.terminate();
             }
@@ -140,29 +135,29 @@ async function Init(): Promise<void> {
     // decode from MessagePack (Buffer) to JS Object
     //let data = msgpack.decode(buffer); // => {"foo": "bar"}
     //console.log(data)
-/*
-    const gio = GIO.geckos();
-
-    gio.listen()
-
-    gio.onConnection(channel => {
-        channel.onDisconnect(() => {
-            console.log(`${channel.id} got disconnected`)
-        })
-
-        channel.on('chat message', data => {
-            console.log(`got ${data} from "chat message"`)
-            // emit the "chat message" data to all channels in the same room
-            gio.room(channel.roomId).emit('chat message', data)
-        })
-    })*/
+    /*
+        const gio = GIO.geckos();
+    
+        gio.listen()
+    
+        gio.onConnection(channel => {
+            channel.onDisconnect(() => {
+                console.log(`${channel.id} got disconnected`)
+            })
+    
+            channel.on('chat message', data => {
+                console.log(`got ${data} from "chat message"`)
+                // emit the "chat message" data to all channels in the same room
+                gio.room(channel.roomId).emit('chat message', data)
+            })
+        })*/
 
 }
 //***********************************************************************************************************************
 //***********************************************************************************************************************
 async function P0(dt: number): Promise<void> {
-    let hrstart  = process.hrtime();
-    if(MyWorld){//FASTEST Game Loop!
+    let hrstart = process.hrtime();
+    if (MyWorld) {//FASTEST Game Loop!
         MyWorld.Process(dt);//Process world
     }
     let hrend = process.hrtime(hrstart);
@@ -172,8 +167,8 @@ async function P0(dt: number): Promise<void> {
 //***********************************************************************************************************************
 //***********************************************************************************************************************
 async function P1(_dt: number): Promise<void> {
-    let hrstart  = process.hrtime();
-    if(MyWorld){//Update Players only
+    let hrstart = process.hrtime();
+    if (MyWorld) {//Update Players only
         MyPM.UpdatePlayers();//Update Players (limited view area)
     }
     let hrend = process.hrtime(hrstart);
@@ -187,7 +182,7 @@ async function P2(_dt: number): Promise<void> {
     let u = Object.keys(MyWorld.CD.GetAllObjs("unit")).length;
     let f = Object.keys(MyWorld.CD.GetAllObjs("dynamic")).length;
     console.log('Ptime: ' + PTime + " ms " + "SendTime: " + PSendTime + " ms "
-        + " Food: " + f + " Circles: " + u );
+        + " Food: " + f + " Circles: " + u);
 
 }
 //***********************************************************************************************************************
@@ -203,4 +198,4 @@ async function P4(_dt: number): Promise<void> {
 }
 //***********************************************************************************************************************
 //***********************************************************************************************************************
-Init().then(_r => {});
+Init().then(_r => { });

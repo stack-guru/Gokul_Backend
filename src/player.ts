@@ -35,7 +35,7 @@ class PlayerManager implements PlayerManagerInterface {
     Remove(socket: WebSocket): void {
         console.log("[Remove Player]: " + (socket as any).GID);
         if(this.Players.hasOwnProperty((socket as any).GID)){
-            let PD = this.Players[(socket as any).GID];
+            // const PD = this.Players[(socket as any).GID];
             //cleanup Unit
             //if(PD.unit_id !== null){
                 //if(CORE_IO.units.hasOwnProperty(PD.unit_id)){
